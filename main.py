@@ -8,7 +8,12 @@ def import_all_songs():
     songs = {
         'battle' : [],
         'boss' : [],
-        'idle' : [],
+        'idle' : {
+            'tavern' : [],
+            'field' : [],
+            'city' : [],
+            'dungeon' : []
+        },
         'victory' : []
     }
 
@@ -20,7 +25,14 @@ def import_all_songs():
                 elif 'boss1' in root:
                     songs['boss1'].append(os.path.join(root, file))
                 elif 'idle' in root:
-                    songs['idle'].append(os.path.join(root, file))
+                    if 'tavern' in root:
+                        songs['idle']['tavern'].append(os.path.join(root, file))
+                    elif 'field' in root:
+                        songs['idle']['field'].append(os.path.join(root, file))
+                    elif 'city' in root:
+                        songs['idle']['city'].append(os.path.join(root, file))
+                    elif 'dungeon' in root:
+                        songs['idle']['dungeon'].append(os.path.join(root, file))
                 elif 'victory' in root:
                     songs['victory'].append(os.path.join(root, file))
 
@@ -67,57 +79,39 @@ def main():
         else:
             await ctx.send('I am not connected to a voice channel.')
 
-    @bot.command()
-    async def play_battle(ctx):
+    async def play_song(ctx, category, location=None):
         loop_state[ctx.guild.id] = True
         volume_state[ctx.guild.id] = 0.1
-        if songs['battle']:
-            rand_song = random.choice(songs['battle'])
+        if songs[category]:
+            if location:
+                rand_song = random.choice(songs[category][location])
+            else:
+                rand_song = random.choice(songs[category])
             if ctx.voice_client:
                 song = discord.PCMVolumeTransformer(discord.FFmpegPCMAudio(rand_song), volume=volume_state[ctx.guild.id])
                 ctx.voice_client.play(song, after=lambda e: after_play(ctx, song))
                 await ctx.send(f'Playing {rand_song}')
         else:
-            await ctx.send('No battle songs found.')
+            await ctx.send(f'No {category} songs found.')
+
+    @bot.command()
+    async def play_battle(ctx):
+        await play_song(ctx, 'battle')
 
     @bot.command()
     async def play_boss(ctx):
-        loop_state[ctx.guild.id] = True
-        volume_state[ctx.guild.id] = 0.1
-        if songs['boss']:
-            rand_song = random.choice(songs['boss'])
-            if ctx.voice_client:
-                song = discord.PCMVolumeTransformer(discord.FFmpegPCMAudio(rand_song), volume=volume_state[ctx.guild.id])
-                ctx.voice_client.play(song, after=lambda e: after_play(ctx, song))
-                await ctx.send(f'Playing {rand_song}')
-        else:
-            await ctx.send('No boss songs found.')
+        await play_song(ctx, 'boss')
 
     @bot.command()
-    async def play_idle(ctx):
-        loop_state[ctx.guild.id] = True
-        volume_state [ctx.guild.id] = 0.1
-        if songs['idle']:
-            rand_song = random.choice(songs['idle'])
-            if ctx.voice_client:
-                song = discord.PCMVolumeTransformer(discord.FFmpegPCMAudio(rand_song), volume=volume_state[ctx.guild.id])
-                ctx.voice_client.play(song, after=lambda e: after_play(ctx, song))
-                await ctx.send(f'Playing {rand_song}')
+    async def play_idle(ctx, location: str):
+        if location in songs['idle']:
+            await play_song(ctx, 'idle', location)
         else:
-            await ctx.send('No idle songs found.')
+            await ctx.send('Invalid location. Please choose from tavern, field, or dungeon.')
 
     @bot.command()
     async def play_victory(ctx):
-        loop_state[ctx.guild.id] = True
-        volume_state [ctx.guild.id] = 0.1
-        if songs['victory']:
-            rand_song = random.choice(songs['victory'])
-            if ctx.voice_client:
-                song = discord.PCMVolumeTransformer(discord.FFmpegPCMAudio(rand_song), volume=volume_state[ctx.guild.id])
-                ctx.voice_client.play(song, after=lambda e: after_play(ctx, song))
-                await ctx.send(f'Playing {rand_song}')
-        else:
-            await ctx.send('No victory songs found.')
+        await play_song(ctx, 'victory')
 
     @bot.command()
     async def stop(ctx):
