@@ -36,6 +36,7 @@ def main():
     bot = commands.Bot(command_prefix='!', intents=intents)
 
     loop_state = {}
+    volume_state = {}
 
     def after_play(ctx, song):
         if loop_state.get(ctx.guild.id, False):
@@ -69,48 +70,52 @@ def main():
     @bot.command()
     async def play_battle(ctx):
         loop_state[ctx.guild.id] = True
+        volume_state[ctx.guild.id] = 0.1
         if songs['battle']:
             rand_song = random.choice(songs['battle'])
             if ctx.voice_client:
-                song = rand_song
-                ctx.voice_client.play(discord.FFmpegPCMAudio(song), after=lambda e: after_play(ctx, song))
-                await ctx.send(f'Playing {song}')
+                song = discord.PCMVolumeTransformer(discord.FFmpegPCMAudio(rand_song), volume=volume_state[ctx.guild.id])
+                ctx.voice_client.play(song, after=lambda e: after_play(ctx, song))
+                await ctx.send(f'Playing {rand_song}')
         else:
             await ctx.send('No battle songs found.')
 
     @bot.command()
     async def play_boss(ctx):
         loop_state[ctx.guild.id] = True
+        volume_state[ctx.guild.id] = 0.1
         if songs['boss']:
             rand_song = random.choice(songs['boss'])
             if ctx.voice_client:
-                song = rand_song
-                ctx.voice_client.play(discord.FFmpegPCMAudio(song), after=lambda e: after_play(ctx, song))
-                await ctx.send(f'Playing {song}')
+                song = discord.PCMVolumeTransformer(discord.FFmpegPCMAudio(rand_song), volume=volume_state[ctx.guild.id])
+                ctx.voice_client.play(song, after=lambda e: after_play(ctx, song))
+                await ctx.send(f'Playing {rand_song}')
         else:
             await ctx.send('No boss songs found.')
 
     @bot.command()
     async def play_idle(ctx):
         loop_state[ctx.guild.id] = True
+        volume_state [ctx.guild.id] = 0.1
         if songs['idle']:
             rand_song = random.choice(songs['idle'])
             if ctx.voice_client:
-                song = rand_song
-                ctx.voice_client.play(discord.FFmpegPCMAudio(song), after=lambda e: after_play(ctx, song))
-                await ctx.send(f'Playing {song}')
+                song = discord.PCMVolumeTransformer(discord.FFmpegPCMAudio(rand_song), volume=volume_state[ctx.guild.id])
+                ctx.voice_client.play(song, after=lambda e: after_play(ctx, song))
+                await ctx.send(f'Playing {rand_song}')
         else:
             await ctx.send('No idle songs found.')
 
     @bot.command()
     async def play_victory(ctx):
         loop_state[ctx.guild.id] = True
+        volume_state [ctx.guild.id] = 0.1
         if songs['victory']:
             rand_song = random.choice(songs['victory'])
             if ctx.voice_client:
-                song = rand_song
-                ctx.voice_client.play(discord.FFmpegPCMAudio(song), after=lambda e: after_play(ctx, song))
-                await ctx.send(f'Playing {song}')
+                song = discord.PCMVolumeTransformer(discord.FFmpegPCMAudio(rand_song), volume=volume_state[ctx.guild.id])
+                ctx.voice_client.play(song, after=lambda e: after_play(ctx, song))
+                await ctx.send(f'Playing {rand_song}')
         else:
             await ctx.send('No victory songs found.')
 
