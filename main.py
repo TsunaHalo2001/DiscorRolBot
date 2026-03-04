@@ -14,7 +14,8 @@ def import_all_songs():
             'city' : [],
             'dungeon' : []
         },
-        'victory' : []
+        'victory' : [],
+        'heal' : [],
     }
 
     for root, dirs, files in os.walk('src'):
@@ -22,8 +23,8 @@ def import_all_songs():
             if file.endswith('.mp3') or file.endswith('.ogg'):
                 if 'battle' in root:
                     songs['battle'].append(os.path.join(root, file))
-                elif 'boss1' in root:
-                    songs['boss1'].append(os.path.join(root, file))
+                elif 'boss' in root:
+                    songs['boss'].append(os.path.join(root, file))
                 elif 'idle' in root:
                     if 'tavern' in root:
                         songs['idle']['tavern'].append(os.path.join(root, file))
@@ -35,6 +36,8 @@ def import_all_songs():
                         songs['idle']['dungeon'].append(os.path.join(root, file))
                 elif 'victory' in root:
                     songs['victory'].append(os.path.join(root, file))
+                elif 'heal' in root:
+                    songs['heal'].append(os.path.join(root, file))
 
     return songs
 
@@ -89,7 +92,11 @@ def main():
                 rand_song = random.choice(songs[category])
             if ctx.voice_client:
                 song = discord.PCMVolumeTransformer(discord.FFmpegPCMAudio(rand_song), volume=volume_state[ctx.guild.id])
-                ctx.voice_client.play(song, after=lambda e: after_play(ctx, song))
+                if category == 'heal':
+                    loop_state[ctx.guild.id] = False
+                    ctx.voice_client.play(song)
+                else:
+                    ctx.voice_client.play(song, after=lambda e: after_play(ctx, song))
                 await ctx.send(f'Playing {rand_song}')
         else:
             await ctx.send(f'No {category} songs found.')
@@ -112,6 +119,10 @@ def main():
     @bot.command()
     async def play_victory(ctx):
         await play_song(ctx, 'victory')
+
+    @bot.command()
+    async def play_heal(ctx):
+        await play_song(ctx, 'heal')
 
     @bot.command()
     async def stop(ctx):
