@@ -55,7 +55,7 @@ def main():
 
     def after_play(ctx, song):
         if loop_state.get(ctx.guild.id, False):
-            ctx.voice_client.play(discord.FFmpegPCMAudio(song), after=lambda e: after_play(ctx, song))
+            ctx.voice_client.play(discord.PCMVolumeTransformer(discord.FFmpegPCMAudio(song), volume=volume_state[ctx.guild.id]), after=lambda e: after_play(ctx, song))
 
     @bot.event
     async def on_ready():
@@ -96,7 +96,7 @@ def main():
                     loop_state[ctx.guild.id] = False
                     ctx.voice_client.play(song)
                 else:
-                    ctx.voice_client.play(song, after=lambda e: after_play(ctx, song))
+                    ctx.voice_client.play(song, after=lambda e: after_play(ctx, rand_song))
                 await ctx.send(f'Playing {rand_song}')
         else:
             await ctx.send(f'No {category} songs found.')
