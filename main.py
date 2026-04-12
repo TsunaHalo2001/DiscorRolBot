@@ -1,5 +1,6 @@
 import discord
 from discord.ext import commands
+import asyncio
 import os
 import random
 import protected
@@ -54,6 +55,7 @@ def main():
 
     loop_state = {}
     volume_state = {}
+    playback_token = {}
 
     def get_voice_client(ctx):
         voice_client = ctx.voice_client
@@ -73,19 +75,60 @@ def main():
             return songs[category]
         return []
 
-    def after_play(ctx, song):
+    async def replay_loop_song(ctx, song, token):
+        guild_id = ctx.guild.id
+        if not loop_state.get(guild_id, False) or playback_token.get(guild_id) != token:
+            return
+
         voice_client = get_voice_client(ctx)
         if not voice_client:
             return
 
-        if loop_state.get(ctx.guild.id, False):
+        # Wait until discord fully releases the previous ffmpeg source.
+        for _ in range(15):
+            if not voice_client.is_playing() and not voice_client.is_paused():
+                break
+            await asyncio.sleep(0.1)
+        else:
+            return
+
+        if not loop_state.get(guild_id, False) or playback_token.get(guild_id) != token:
+            return
+
+        try:
             voice_client.play(
                 discord.PCMVolumeTransformer(
                     discord.FFmpegPCMAudio(song),
-                    volume=volume_state[ctx.guild.id]
+                    volume=volume_state[guild_id]
                 ),
-                after=lambda e: after_play(ctx, song)
+                after=lambda e: after_play(ctx, song, token, e)
             )
+        except discord.ClientException:
+            # One short retry covers occasional late release of the player state.
+            await asyncio.sleep(0.2)
+            if voice_client.is_playing() or voice_client.is_paused():
+                return
+            if not loop_state.get(guild_id, False) or playback_token.get(guild_id) != token:
+                return
+            voice_client.play(
+                discord.PCMVolumeTransformer(
+                    discord.FFmpegPCMAudio(song),
+                    volume=volume_state[guild_id]
+                ),
+                after=lambda e: after_play(ctx, song, token, e)
+            )
+
+    def after_play(ctx, song, token, error):
+        if error:
+            print(f'Playback error: {error}')
+
+        guild_id = ctx.guild.id
+        if not loop_state.get(guild_id, False) or playback_token.get(guild_id) != token:
+            return
+
+        bot.loop.call_soon_threadsafe(
+            lambda: bot.loop.create_task(replay_loop_song(ctx, song, token))
+        )
 
     @bot.event
     async def on_ready():
@@ -110,6 +153,7 @@ def main():
             await ctx.send('I am not connected to a voice channel.')
             return
 
+        playback_token[ctx.guild.id] = playback_token.get(ctx.guild.id, 0) + 1
         loop_state[ctx.guild.id] = False
         if voice_client.is_playing() or voice_client.is_paused():
             voice_client.stop()
@@ -130,6 +174,10 @@ def main():
         if not voice_client:
             await ctx.send('I am not connected to a voice channel.')
             return
+
+        guild_id = ctx.guild.id
+        playback_token[guild_id] = playback_token.get(guild_id, 0) + 1
+        token = playback_token[guild_id]
 
         loop_state[ctx.guild.id] = True
         volume_state[ctx.guild.id] = 0.1
@@ -152,7 +200,7 @@ def main():
         if category == 'heal':
             loop_state[ctx.guild.id] = False
 
-        voice_client.play(song, after=lambda e: after_play(ctx, rand_song))
+        voice_client.play(song, after=lambda e: after_play(ctx, rand_song, token, e))
         await ctx.send(f'Playing {os.path.basename(rand_song)}')
 
     @bot.command()
